@@ -196,7 +196,10 @@ def prep_batch(batch, seq_len, in_dim):
         inputs = one_hot(inputs, in_dim)
 
     if lengths is not None:
-        masks = create_mask(inputs, jnp.array(lengths))
+        lengths = jnp.array(lengths)
+        if len(lengths.shape) == 1:  # If lengths only give last
+            lengths = jnp.stack([jnp.zeros((inputs.shape[0],)), lengths], axis=1)
+        masks = create_mask(inputs, lengths)
     else:
         masks = jnp.ones((inputs.shape[0], inputs.shape[1]))
 
