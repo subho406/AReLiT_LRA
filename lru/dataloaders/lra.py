@@ -60,9 +60,7 @@ class IMDB(SequenceDataset):
         if stage == "test" and hasattr(self, "dataset_test"):
             return
         dataset, self.tokenizer, self.vocab = self.process_dataset()
-        print(
-            f"IMDB {self.level} level | min_freq {self.min_freq} | vocab size {len(self.vocab)}"
-        )
+        print(f"IMDB {self.level} level | min_freq {self.min_freq} | vocab size {len(self.vocab)}")
         dataset.set_format(type="torch", columns=["input_ids", "label"])
 
         # Create all splits
@@ -71,9 +69,7 @@ class IMDB(SequenceDataset):
             # Use test set as val set, as done in the LRA paper
             self.dataset_train, self.dataset_val = dataset_train, None
         else:
-            train_val = dataset_train.train_test_split(
-                test_size=self.val_split, seed=self.seed
-            )
+            train_val = dataset_train.train_test_split(test_size=self.val_split, seed=self.seed)
             self.dataset_train, self.dataset_val = (
                 train_val["train"],
                 train_val["test"],
@@ -82,18 +78,14 @@ class IMDB(SequenceDataset):
     def _collate_fn(self, batch):
         xs, ys = zip(*[(data["input_ids"], data["label"]) for data in batch])
         lengths = torch.tensor([len(x) for x in xs])
-        xs = nn.utils.rnn.pad_sequence(
-            xs, padding_value=self.vocab["<pad>"], batch_first=True
-        )
+        xs = nn.utils.rnn.pad_sequence(xs, padding_value=self.vocab["<pad>"], batch_first=True)
         ys = torch.tensor(ys)
         return xs, ys, {"lengths": lengths}
 
         # self._collate_fn = collate_batch
 
     def process_dataset(self):
-        cache_dir = (
-            None if self.cache_dir is None else self.cache_dir / self._cache_dir_name
-        )
+        cache_dir = None if self.cache_dir is None else self.cache_dir / self._cache_dir_name
         if cache_dir is not None:
             if cache_dir.is_dir():
                 return self._load_from_cache(cache_dir)
@@ -101,14 +93,15 @@ class IMDB(SequenceDataset):
         dataset = load_dataset(self._name_, cache_dir=self.data_dir)
         dataset = DatasetDict(train=dataset["train"], test=dataset["test"])
         if self.level == "word":
-            tokenizer = torchtext.data.utils.get_tokenizer(
-                "spacy", language="en_core_web_sm"
-            )
+            tokenizer = torchtext.data.utils.get_tokenizer("spacy", language="en_core_web_sm")
         else:  # self.level == 'char'
             tokenizer = list  # Just convert a string to a list of chars
         # Account for <bos> and <eos> tokens
         l_max = self.l_max - int(self.append_bos) - int(self.append_eos)
-        tokenize = lambda example: {"tokens": tokenizer(example["text"])[:l_max]}
+
+        def tokenize(example):
+            return {"tokens": tokenizer(example["text"])[:l_max]}
+
         dataset = dataset.map(
             tokenize,
             remove_columns=["text"],
@@ -127,13 +120,15 @@ class IMDB(SequenceDataset):
         )
         vocab.set_default_index(vocab["<unk>"])
 
-        numericalize = lambda example: {
-            "input_ids": vocab(
-                (["<bos>"] if self.append_bos else [])
-                + example["tokens"]
-                + (["<eos>"] if self.append_eos else [])
-            )
-        }
+        def numericalize(example):
+            return {
+                "input_ids": vocab(
+                    (["<bos>"] if self.append_bos else [])
+                    + example["tokens"]
+                    + (["<eos>"] if self.append_eos else [])
+                )
+            }
+
         dataset = dataset.map(
             numericalize,
             remove_columns=["tokens"],
@@ -169,7 +164,11 @@ class IMDB(SequenceDataset):
 
     @property
     def _cache_dir_name(self):
-        return f"l_max-{self.l_max}-level-{self.level}-min_freq-{self.min_freq}-append_bos-{self.append_bos}-append_eos-{self.append_eos}"
+        return (
+            f"l_max-{self.l_max}-level-{self.level}-min_freq-{self.min_freq}-append_bos"
+            f"-{self.append_bos}-append_eos-{self.append_eos}"
+        )
+
 
 class TabularDataset(torch.utils.data.Dataset):
     def __init__(
@@ -191,16 +190,13 @@ class TabularDataset(torch.utils.data.Dataset):
             if format == "csv":
                 reader = torchtext.utils.unicode_csv_reader(f, **csv_reader_params)
             elif format == "tsv":
-                reader = torchtext.utils.unicode_csv_reader(
-                    f, delimiter="\t", **csv_reader_params
-                )
+                reader = torchtext.utils.unicode_csv_reader(f, delimiter="\t", **csv_reader_params)
             else:
                 reader = f
             if skip_header:
                 next(reader)
             self._data = [
-                line if col_idx is None else [line[c] for c in col_idx]
-                for line in reader
+                line if col_idx is None else [line[c] for c in col_idx] for line in reader
             ]
 
     def __len__(self):
@@ -276,19 +272,16 @@ class ListOps(SequenceDataset):
 
         def collate_batch(batch):
             xs, ys = zip(*[(data["input_ids"], data["Target"]) for data in batch])
-            lengths = torch.tensor([len(x) for x in xs])
-            xs = nn.utils.rnn.pad_sequence(
-                xs, padding_value=self.vocab["<pad>"], batch_first=True
-            )
+            # Added zeros to the length for start of mask
+            lengths = torch.tensor([[0, len(x)] for x in xs])
+            xs = nn.utils.rnn.pad_sequence(xs, padding_value=self.vocab["<pad>"], batch_first=True)
             ys = torch.tensor(ys)
             return xs, ys, {"lengths": lengths}
 
         self._collate_fn = collate_batch
 
     def process_dataset(self):
-        cache_dir = (
-            None if self.cache_dir is None else self.cache_dir / self._cache_dir_name
-        )
+        cache_dir = None if self.cache_dir is None else self.cache_dir / self._cache_dir_name
         if cache_dir is not None:
             if cache_dir.is_dir():
                 return self._load_from_cache(cache_dir)
@@ -308,7 +301,10 @@ class ListOps(SequenceDataset):
 
         # Account for <bos> and <eos> tokens
         l_max = self.l_max - int(self.append_bos) - int(self.append_eos)
-        tokenize = lambda example: {"tokens": tokenizer(example["Source"])[:l_max]}
+
+        def tokenize(example):
+            return {"tokens": tokenizer(example["Source"])[:l_max]}
+
         dataset = dataset.map(
             tokenize,
             remove_columns=["Source"],
@@ -326,13 +322,15 @@ class ListOps(SequenceDataset):
         )
         vocab.set_default_index(vocab["<unk>"])
 
-        numericalize = lambda example: {
-            "input_ids": vocab(
-                (["<bos>"] if self.append_bos else [])
-                + example["tokens"]
-                + (["<eos>"] if self.append_eos else [])
-            )
-        }
+        def numericalize(example):
+            return {
+                "input_ids": vocab(
+                    (["<bos>"] if self.append_bos else [])
+                    + example["tokens"]
+                    + (["<eos>"] if self.append_eos else [])
+                )
+            }
+
         dataset = dataset.map(
             numericalize,
             remove_columns=["tokens"],
@@ -366,6 +364,7 @@ class ListOps(SequenceDataset):
             vocab = pickle.load(f)
         return dataset, tokenizer, vocab
 
+
 class PathFinderDataset(torch.utils.data.Dataset):
     """Path Finder dataset."""
 
@@ -395,10 +394,7 @@ class PathFinderDataset(torch.utils.data.Dataset):
                     for metadata in f.read().splitlines():
                         metadata = metadata.split()
                         image_path = Path(diff_level) / metadata[0] / metadata[1]
-                        if (
-                            str(Path(self.data_dir.stem) / image_path)
-                            not in self.blacklist
-                        ):
+                        if str(Path(self.data_dir.stem) / image_path) not in self.blacklist:
                             label = int(metadata[3])
                             samples.append((image_path, label))
         self.samples = samples
@@ -451,17 +447,13 @@ class PathFinder(ImageResolutionSequenceDataset):
                 )
             )
         if self.tokenize:
-            transform_list.append(
-                torchvision.transforms.Lambda(lambda x: (x * 255).long())
-            )
+            transform_list.append(torchvision.transforms.Lambda(lambda x: (x * 255).long()))
         else:
             transform_list.append(torchvision.transforms.Normalize(mean=0.5, std=0.5))
         if self.sequential:
             # If tokenize, it makes more sense to get rid of the channel dimension
             transform_list.append(
-                Rearrange("1 h w -> (h w)")
-                if self.tokenize
-                else Rearrange("1 h w -> (h w) 1")
+                Rearrange("1 h w -> (h w)") if self.tokenize else Rearrange("1 h w -> (h w) 1")
             )
         else:
             transform_list.append(Rearrange("1 h w -> h w 1"))
@@ -481,17 +473,15 @@ class PathFinder(ImageResolutionSequenceDataset):
 
     def setup(self, stage=None):
         if self.data_dir is None:
-            self.data_dir = (
-                default_data_path / self._name_ / f"pathfinder{self.resolution}"
-            )
+            self.data_dir = default_data_path / self._name_ / f"pathfinder{self.resolution}"
 
         if self.cache_dir is not None:
-            if Path(self.cache_dir / (self._cache_dir_name + '.pt')).exists():
-                with open(self.cache_dir / (self._cache_dir_name + '.pt'), 'rb') as f:
+            if Path(self.cache_dir / (self._cache_dir_name + ".pt")).exists():
+                with open(self.cache_dir / (self._cache_dir_name + ".pt"), "rb") as f:
                     dset = torch.load(f)
-                self.dataset_train = dset['train']
-                self.dataset_val = dset['val']
-                self.dataset_test = dset['test']
+                self.dataset_train = dset["train"]
+                self.dataset_val = dset["val"]
+                self.dataset_test = dset["test"]
                 return None
 
         if stage == "test" and hasattr(self, "dataset_test"):
@@ -522,25 +512,26 @@ class PathFinder(ImageResolutionSequenceDataset):
             :param tag:
             :return:
             """
-            loader = torch.utils.data.DataLoader(dataset=dset, batch_size=len(dset), shuffle=False, drop_last=False)
+            loader = torch.utils.data.DataLoader(
+                dataset=dset, batch_size=len(dset), shuffle=False, drop_last=False
+            )
             inp, out = next(iter(loader))
             dset_compiled = torch.utils.data.TensorDataset(inp, out)
             return dset_compiled
 
         os.makedirs(self.cache_dir, exist_ok=True)
-        self.dataset_train = _compile_convert(self.dataset_train, tag='train')
-        self.dataset_val = _compile_convert(self.dataset_val, tag='val')
-        self.dataset_test = _compile_convert(self.dataset_test, tag='test')
+        self.dataset_train = _compile_convert(self.dataset_train, tag="train")
+        self.dataset_val = _compile_convert(self.dataset_val, tag="val")
+        self.dataset_test = _compile_convert(self.dataset_test, tag="test")
 
         # Cache.
-        cache_path = self.cache_dir / (self._cache_dir_name + '.pt')
+        cache_path = self.cache_dir / (self._cache_dir_name + ".pt")
         logger = logging.getLogger(__name__)
         logger.info(f"Saving to cache at {str(cache_path)}")
-        with open(cache_path, 'wb') as f:
-            torch.save({'train': self.dataset_train,
-                        'val': self.dataset_val,
-                        'test': self.dataset_test},
-                       f)
+        with open(cache_path, "wb") as f:
+            torch.save(
+                {"train": self.dataset_train, "val": self.dataset_val, "test": self.dataset_test}, f
+            )
 
     @property
     def _cache_dir_name(self):
@@ -613,10 +604,7 @@ class AAN(SequenceDataset):
 
         def collate_batch(batch):
             xs1, xs2, ys = zip(
-                *[
-                    (data["input_ids1"], data["input_ids2"], data["label"])
-                    for data in batch
-                ]
+                *[(data["input_ids1"], data["input_ids2"], data["label"]) for data in batch]
             )
             lengths1 = torch.tensor([len(x) for x in xs1])
             lengths2 = torch.tensor([len(x) for x in xs2])
@@ -629,8 +617,8 @@ class AAN(SequenceDataset):
             # Pad both to same length
             # Shape (batch, length)
             L = max(xs1.size(1), xs2.size(1))
-            xs1 = F.pad(xs1, (0, L-xs1.size(1)), value=self.vocab["<pad>"])
-            xs2 = F.pad(xs2, (0, L-xs2.size(1)), value=self.vocab["<pad>"])
+            xs1 = F.pad(xs1, (0, L - xs1.size(1)), value=self.vocab["<pad>"])
+            xs2 = F.pad(xs2, (0, L - xs2.size(1)), value=self.vocab["<pad>"])
             ys = torch.tensor(ys)
             # return xs1, xs2, ys, lengths1, lengths2
 
@@ -642,9 +630,7 @@ class AAN(SequenceDataset):
         self._collate_fn = collate_batch
 
     def process_dataset(self):
-        cache_dir = (
-            None if self.cache_dir is None else self.cache_dir / self._cache_dir_name
-        )
+        cache_dir = None if self.cache_dir is None else self.cache_dir / self._cache_dir_name
         if cache_dir is not None:
             if cache_dir.is_dir():
                 return self._load_from_cache(cache_dir)
@@ -668,10 +654,13 @@ class AAN(SequenceDataset):
         tokenizer = list  # Just convert a string to a list of chars
         # Account for <bos> and <eos> tokens
         l_max = self.l_max - int(self.append_bos) - int(self.append_eos)
-        tokenize = lambda example: {
-            "tokens1": tokenizer(example["text1"])[:l_max],
-            "tokens2": tokenizer(example["text2"])[:l_max],
-        }
+
+        def tokenize(example):
+            {
+                "tokens1": tokenizer(example["text1"])[:l_max],
+                "tokens2": tokenizer(example["text2"])[:l_max],
+            }
+
         dataset = dataset.map(
             tokenize,
             remove_columns=["text1", "text2"],
@@ -689,15 +678,19 @@ class AAN(SequenceDataset):
         )
         vocab.set_default_index(vocab["<unk>"])
 
-        encode = lambda text: vocab(
-            (["<bos>"] if self.append_bos else [])
-            + text
-            + (["<eos>"] if self.append_eos else [])
-        )
-        numericalize = lambda example: {
-            "input_ids1": encode(example["tokens1"]),
-            "input_ids2": encode(example["tokens2"]),
-        }
+        def encode(text):
+            vocab(
+                (["<bos>"] if self.append_bos else [])
+                + text
+                + (["<eos>"] if self.append_eos else [])
+            )
+
+        def numericalize(example):
+            {
+                "input_ids1": encode(example["tokens1"]),
+                "input_ids2": encode(example["tokens2"]),
+            }
+
         dataset = dataset.map(
             numericalize,
             remove_columns=["tokens1", "tokens2"],
