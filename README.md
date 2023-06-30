@@ -2,9 +2,9 @@
 
 This repository is an unofficial JAX implementation of the Linear Recurrent Unit (LRU) paper:
 
-**Resurrecting Recurrent Neural Networks for Long Sequences**  
-Antonio Orvieto, Samuel L Smith, Albert Gu, Anushan Fernando, Caglar Gulcehre, Razvan Pascanu, Soham De
-International Conference on Machine Learning, 2023.
+**Resurrecting Recurrent Neural Networks for Long Sequences**  \
+Antonio Orvieto, Samuel L Smith, Albert Gu, Anushan Fernando, Caglar Gulcehre, Razvan Pascanu, Soham De\
+ICML, 2023\
 [arXiv](https://arxiv.org/abs/2303.06349)
 
 ![](./docs/figures/lru.png)
@@ -13,26 +13,26 @@ International Conference on Machine Learning, 2023.
 Figure 1:  Visual summary of the LRU architecture (taken from the LRU paper).
 </p>
 
-Its goal is to provide a concise code base for running a recurrent neural network made of LRUs on
-the different benchmarks (and more) used in the paper. The LRU layer builds upon existing work on
-deep state space models, so does this repository. It is adapted from the
-[S5 repository](https://github.com/lindermanlab/S5), which was itself adapted from a
+The goal of this project is to provide a concise codebase that contains everything needed to run a
+recurrent neural network made of LRUs on various benchmarks. The LRU layer builds
+upon existing work on deep state space models, and so does this repository. It is adapted from the
+[S5 repository](https://github.com/lindermanlab/S5), which was itself derived from a
 [JAX implementation](https://github.com/srush/annotated-s4) of S4 by Rush and Karamcheti. The
 implementation of the LRU layer is an adaptation of the pseudo code provided in the paper. Note that
-we here follow the same design choices as the ones made in the LRU paper. For additional design
-choices (e.g. on type of nonlinear processing in a layer), we refer to the S5 code base.
+we follow the same design choices as the ones made in the LRU paper. For additional design
+choices (e.g. on type of nonlinear processing in a layer), we refer to the S5 codebase.
 
 ## Requirements & Installation
 
 To run the code on your own machine, run `pip install -r requirements.txt`. The GPU installation of
-JAX can be tricky, further instructions are available on how to install
+JAX can be tricky; further instructions are available on how to install it
 [here](https://github.com/google/jax#installation). PyTorch also needs to be installed separately
-because of interference issues with jax: install the cpu version of pytorch from
+because of interference issues with jax: install the CPU version of pytorch from
 [this page](https://pytorch.org/get-started/locally/).
 
 ### Data Download
 
-Downloading the raw data is done differently for each dataset. The following datasets require no action:
+Downloading the raw data differs for each dataset. The following datasets require no action:
 
 - Text (IMDb)
 - Image (Cifar black & white)
@@ -55,15 +55,15 @@ Directories and files that ship with GitHub repo:
 
 ```
 lru/                   Source code for models, datasets, etc.
-    dataloaders/            Code mainly derived from S4 processing each dataset.
-    dataloading.py          Dataloading functions.
-    model.py                Defines the LRU module, individual layers and entire models.
-    train.py                Training loop code.
-    train_helpers.py        Functions for optimization, training and evaluation steps.
-    utils/                  Range of utility functions.
-bin/                    Shell scripts for downloading data.
-requirements.txt        Requirements for running the code.
-run_train.py            Training loop entrypoint.
+    dataloaders/       Code mainly derived from S4 processing each dataset.
+    dataloading.py     Dataloading functions.
+    model.py           Defines the LRU module, individual layers and entire models.
+    train.py           Training loop code.
+    train_helpers.py   Functions for optimization, training and evaluation steps.
+    utils/             A range of utility functions.
+bin/                   Shell scripts for downloading data.
+requirements.txt       Requirements for running the code.
+run_train.py           Training loop entrypoint.
 ```
 
 Directories that may be created on-the-fly:
@@ -76,7 +76,7 @@ wandb/              Local WandB log files.
 
 ## Run experiments
 
-Running the different experiments require a weight and biases account to log the results.
+Running the different experiments requires a Weights and Biases account to log the results.
 
 ### Copy task
 
@@ -121,7 +121,43 @@ two categories.
 python run_train.py --dataset imdb-classification --epochs 35
 ```
 
-### Other datasets
+### Other datasets
 
 The other datasets from the Long Range Arena benchmark have not been tested yet, integration of those
 datasets will come soon!
+
+
+## Useful references
+
+The original S4 paper, that originated the line of research on deep state space models:\
+**Efficiently Modeling Long Sequences with Structured State Spaces** \
+Albert Gu, Karan Goel, and Christopher Ré \
+ICLR 2022 \
+[arXiv](https://arxiv.org/abs/2111.00396)
+ | [GitHub](https://github.com/HazyResearch/state-spaces)
+
+Blog post getting into the details of S4 and providing a Jax implementation of S4:\
+**The Annotated S4** \
+Sasha Rush, and Sidd Karamcheti \
+[GitHub](https://srush.github.io/annotated-s4/)
+
+The S5 paper, that makes S4 faster by making the recurrent connections diagonal, and whose code base
+serves as basis for this repository: \
+**Simplified state space layers for sequence modeling**\
+Jimmy T.H. Smith, Andrew Warrington, Scott W. Linderman \
+ICLR 2023\
+[arXiv](https://arxiv.org/abs/2208.04933)
+ | [GitHub](https://github.com/lindermanlab/S5/tree/main)
+
+The LRU paper: \
+**Resurrecting Recurrent Neural Networks for Long Sequences**  \
+Antonio Orvieto, Samuel L Smith, Albert Gu, Anushan Fernando, Caglar Gulcehre, Razvan Pascanu, Soham De\
+ICML, 2023\
+[arXiv](https://arxiv.org/abs/2303.06349)
+
+[A bit of personal advertisement] Our paper shows that having independent recurrent modules such as
+in the LRU considerably simplifies real-time recurrent learning, the alternative to
+backpropagation-through-time that does not require going back in time: \
+**Online learning of long-range dependencies** \
+Nicolas Zucchet, Robert Meier, Simon Schug, Asier Mujika, João Sacramento \
+[arXiv](https://arxiv.org/abs/2305.15947)
