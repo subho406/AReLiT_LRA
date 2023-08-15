@@ -1,6 +1,6 @@
 chex
 einops
-flax
+flax==0.6.10
 torchaudio
 torchvision
 torchtext
