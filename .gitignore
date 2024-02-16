@@ -165,3 +165,6 @@ wandb/
 cache_dir/
 raw_datasets/
 raw_data/
+
+# VS Code
+.vscode/
