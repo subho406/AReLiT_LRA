@@ -15,16 +15,16 @@ def binary_operator_diag(q_i, q_j):
     return A_j * A_i, A_j * b_i + b_j
 
 
-def matrix_init(key, shape, dtype=jnp.float_, normalization=1):
+def matrix_init(key, shape, dtype=jnp.float32, normalization=1):
     return jax.random.normal(key=key, shape=shape, dtype=dtype) / normalization
 
 
-def nu_init(key, shape, r_min, r_max, dtype=jnp.float_):
+def nu_init(key, shape, r_min, r_max, dtype=jnp.float32):
     u = jax.random.uniform(key=key, shape=shape, dtype=dtype)
     return jnp.log(-0.5 * jnp.log(u * (r_max**2 - r_min**2) + r_min**2))
 
 
-def theta_init(key, shape, max_phase, dtype=jnp.float_):
+def theta_init(key, shape, max_phase, dtype=jnp.float32):
     u = jax.random.uniform(key, shape=shape, dtype=dtype)
     return jnp.log(max_phase * u)
 
@@ -90,7 +90,7 @@ class LRU(nn.Module):
         # Compute hidden states
         _, hidden_states = parallel_scan(binary_operator_diag, (Lambda_elements, Bu_elements))
         # Use them to compute the output of the module
-        outputs = jax.vmap(lambda x, u: (C @ x).real + self.D * u)(hidden_states, inputs)
+        outputs = jax.vmap(lambda h, x: (C @ h).real + self.D * x)(hidden_states, inputs)
 
         return outputs
 
