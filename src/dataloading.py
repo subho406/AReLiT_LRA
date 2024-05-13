@@ -9,7 +9,8 @@ DEFAULT_CACHE_DIR_ROOT = Path("./cache_dir/")
 
 DataLoader = TypeVar("DataLoader")
 InputType = [str, Optional[int], Optional[int]]
-ReturnType = Tuple[DataLoader, DataLoader, DataLoader, Dict, int, int, int, int]
+ReturnType = Tuple[DataLoader, DataLoader,
+                   DataLoader, Dict, int, int, int, int]
 
 # Custom loading functions must therefore have the template.
 dataset_fn = Callable[[str, Optional[int], Optional[int]], ReturnType]
@@ -109,8 +110,8 @@ def create_lra_listops_classification_dataset(
     print("[*] Generating LRA-listops Classification Dataset")
 
     name = "listops"
-    dir_name = "/scratch/subho/raw_datasets/lra_release/listops-1000"
-
+    # dir_name = "/scratch/subho/raw_datasets/lra_release/listops-1000"
+    dir_name = "./raw_datasets/lra_release/lra_release/listops-1000"
     dataset_obj = ListOps(name, data_dir=dir_name)
     dataset_obj.cache_dir = Path(cache_dir) / name
     dataset_obj.setup()

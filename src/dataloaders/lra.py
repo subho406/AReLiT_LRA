@@ -8,6 +8,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 import torchtext
+import torchtext.vocab
 import torchvision
 from einops.layers.torch import Rearrange, Reduce
 from PIL import Image  # Only used for Pathfinder
@@ -60,7 +61,8 @@ class IMDB(SequenceDataset):
         if stage == "test" and hasattr(self, "dataset_test"):
             return
         dataset, self.tokenizer, self.vocab = self.process_dataset()
-        print(f"IMDB {self.level} level | min_freq {self.min_freq} | vocab size {len(self.vocab)}")
+        print(
+            f"IMDB {self.level} level | min_freq {self.min_freq} | vocab size {len(self.vocab)}")
         dataset.set_format(type="torch", columns=["input_ids", "label"])
 
         # Create all splits
@@ -69,7 +71,8 @@ class IMDB(SequenceDataset):
             # Use test set as val set, as done in the LRA paper
             self.dataset_train, self.dataset_val = dataset_train, None
         else:
-            train_val = dataset_train.train_test_split(test_size=self.val_split, seed=self.seed)
+            train_val = dataset_train.train_test_split(
+                test_size=self.val_split, seed=self.seed)
             self.dataset_train, self.dataset_val = (
                 train_val["train"],
                 train_val["test"],
@@ -78,7 +81,8 @@ class IMDB(SequenceDataset):
     def _collate_fn(self, batch):
         xs, ys = zip(*[(data["input_ids"], data["label"]) for data in batch])
         lengths = torch.tensor([len(x) for x in xs])
-        xs = nn.utils.rnn.pad_sequence(xs, padding_value=self.vocab["<pad>"], batch_first=True)
+        xs = nn.utils.rnn.pad_sequence(
+            xs, padding_value=self.vocab["<pad>"], batch_first=True)
         ys = torch.tensor(ys)
         return xs, ys, {"lengths": lengths}
 
@@ -93,7 +97,8 @@ class IMDB(SequenceDataset):
         dataset = load_dataset(self._name_, cache_dir=self.data_dir)
         dataset = DatasetDict(train=dataset["train"], test=dataset["test"])
         if self.level == "word":
-            tokenizer = torchtext.data.utils.get_tokenizer("spacy", language="en_core_web_sm")
+            tokenizer = torchtext.data.utils.get_tokenizer(
+                "spacy", language="en_core_web_sm")
         else:  # self.level == 'char'
             tokenizer = list  # Just convert a string to a list of chars
         # Account for <bos> and <eos> tokens
@@ -188,9 +193,11 @@ class TabularDataset(torch.utils.data.Dataset):
         assert format in ["tsv", "csv"]
         with io.open(os.path.expanduser(path), encoding="utf8") as f:
             if format == "csv":
-                reader = torchtext.utils.unicode_csv_reader(f, **csv_reader_params)
+                reader = torchtext.utils.unicode_csv_reader(
+                    f, **csv_reader_params)
             elif format == "tsv":
-                reader = torchtext.utils.unicode_csv_reader(f, delimiter="\t", **csv_reader_params)
+                reader = torchtext.utils.unicode_csv_reader(
+                    f, delimiter="\t", **csv_reader_params)
             else:
                 reader = f
             if skip_header:
@@ -271,10 +278,12 @@ class ListOps(SequenceDataset):
         )
 
         def collate_batch(batch):
-            xs, ys = zip(*[(data["input_ids"], data["Target"]) for data in batch])
+            xs, ys = zip(*[(data["input_ids"], data["Target"])
+                         for data in batch])
             # Added zeros to the length for start of mask
             lengths = torch.tensor([[0, len(x)] for x in xs])
-            xs = nn.utils.rnn.pad_sequence(xs, padding_value=self.vocab["<pad>"], batch_first=True)
+            xs = nn.utils.rnn.pad_sequence(
+                xs, padding_value=self.vocab["<pad>"], batch_first=True)
             ys = torch.tensor(ys)
             return xs, ys, {"lengths": lengths}
 
@@ -379,7 +388,8 @@ class PathFinderDataset(torch.utils.data.Dataset):
                 on a sample.
         """
         self.data_dir = Path(data_dir).expanduser()
-        assert self.data_dir.is_dir(), f"data_dir {str(self.data_dir)} does not exist"
+        assert self.data_dir.is_dir(
+        ), f"data_dir {str(self.data_dir)} does not exist"
         self.transform = transform
         samples = []
         # for diff_level in ['curv_baseline', 'curv_contour_length_9', 'curv_contour_length_14']:
@@ -393,7 +403,8 @@ class PathFinderDataset(torch.utils.data.Dataset):
                 with open(metadata_file, "r") as f:
                     for metadata in f.read().splitlines():
                         metadata = metadata.split()
-                        image_path = Path(diff_level) / metadata[0] / metadata[1]
+                        image_path = Path(diff_level) / \
+                            metadata[0] / metadata[1]
                         if str(Path(self.data_dir.stem) / image_path) not in self.blacklist:
                             label = int(metadata[3])
                             samples.append((image_path, label))
@@ -447,13 +458,16 @@ class PathFinder(ImageResolutionSequenceDataset):
                 )
             )
         if self.tokenize:
-            transform_list.append(torchvision.transforms.Lambda(lambda x: (x * 255).long()))
+            transform_list.append(
+                torchvision.transforms.Lambda(lambda x: (x * 255).long()))
         else:
-            transform_list.append(torchvision.transforms.Normalize(mean=0.5, std=0.5))
+            transform_list.append(
+                torchvision.transforms.Normalize(mean=0.5, std=0.5))
         if self.sequential:
             # If tokenize, it makes more sense to get rid of the channel dimension
             transform_list.append(
-                Rearrange("1 h w -> (h w)") if self.tokenize else Rearrange("1 h w -> (h w) 1")
+                Rearrange(
+                    "1 h w -> (h w)") if self.tokenize else Rearrange("1 h w -> (h w) 1")
             )
         else:
             transform_list.append(Rearrange("1 h w -> h w 1"))
@@ -473,7 +487,8 @@ class PathFinder(ImageResolutionSequenceDataset):
 
     def setup(self, stage=None):
         if self.data_dir is None:
-            self.data_dir = default_data_path / self._name_ / f"pathfinder{self.resolution}"
+            self.data_dir = default_data_path / \
+                self._name_ / f"pathfinder{self.resolution}"
 
         if self.cache_dir is not None:
             if Path(self.cache_dir / (self._cache_dir_name + ".pt")).exists():
@@ -489,7 +504,8 @@ class PathFinder(ImageResolutionSequenceDataset):
         # [2021-08-18] TD: I ran into RuntimeError: Too many open files.
         # https://github.com/pytorch/pytorch/issues/11201
         torch.multiprocessing.set_sharing_strategy("file_system")
-        dataset = PathFinderDataset(self.data_dir, transform=self.default_transforms())
+        dataset = PathFinderDataset(
+            self.data_dir, transform=self.default_transforms())
         len_dataset = len(dataset)
         val_len = int(self.val_split * len_dataset)
         test_len = int(self.test_split * len_dataset)
@@ -530,7 +546,8 @@ class PathFinder(ImageResolutionSequenceDataset):
         logger.info(f"Saving to cache at {str(cache_path)}")
         with open(cache_path, "wb") as f:
             torch.save(
-                {"train": self.dataset_train, "val": self.dataset_val, "test": self.dataset_test}, f
+                {"train": self.dataset_train, "val": self.dataset_val,
+                    "test": self.dataset_test}, f
             )
 
     @property
@@ -595,7 +612,8 @@ class AAN(SequenceDataset):
         # self.vocab_size = len(self.vocab)
         print("AAN vocab size:", len(self.vocab))
 
-        dataset.set_format(type="torch", columns=["input_ids1", "input_ids2", "label"])
+        dataset.set_format(type="torch", columns=[
+                           "input_ids1", "input_ids2", "label"])
         self.dataset_train, self.dataset_val, self.dataset_test = (
             dataset["train"],
             dataset["val"],

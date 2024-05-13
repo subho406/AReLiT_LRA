@@ -6,4 +6,5 @@ rm -rf ./raw_datasets/lra_release.gz ./raw_datasets/lra_release  # Clean out any
 wget -v https://storage.googleapis.com/long-range-arena/lra_release.gz -P ./raw_datasets
 
 # Add a progress bar because this can be slow.
-pv ./raw_datasets/lra_release.gz | tar -zx -C ./raw_datasets/
+tar -xvf ./raw_datasets/lra_release.gz  ./raw_datasets/
+rm -rf raw_datasets/lra_release.gz

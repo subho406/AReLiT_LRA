@@ -49,12 +49,15 @@ class LRU(nn.Module):
 
     def setup(self):
         self.theta_log = self.param(
-            "theta_log", partial(theta_init, max_phase=self.max_phase), (self.d_hidden,)
+            "theta_log", partial(
+                theta_init, max_phase=self.max_phase), (self.d_hidden,)
         )
         self.nu_log = self.param(
-            "nu_log", partial(nu_init, r_min=self.r_min, r_max=self.r_max), (self.d_hidden,)
+            "nu_log", partial(nu_init, r_min=self.r_min,
+                              r_max=self.r_max), (self.d_hidden,)
         )
-        self.gamma_log = self.param("gamma_log", gamma_log_init, (self.nu_log, self.theta_log))
+        self.gamma_log = self.param(
+            "gamma_log", gamma_log_init, (self.nu_log, self.theta_log))
 
         # Glorot initialized Input/Output projection matrices
         self.B_re = self.param(
@@ -81,16 +84,21 @@ class LRU(nn.Module):
 
     def __call__(self, inputs):
         """Forward pass of a LRU: h_t+1 = lambda * h_t + B x_t+1, y_t = Re[C h_t + D x_t]"""
-        diag_lambda = jnp.exp(-jnp.exp(self.nu_log) + 1j * jnp.exp(self.theta_log))
-        B_norm = (self.B_re + 1j * self.B_im) * jnp.expand_dims(jnp.exp(self.gamma_log), axis=-1)
+        diag_lambda = jnp.exp(-jnp.exp(self.nu_log) +
+                              1j * jnp.exp(self.theta_log))
+        B_norm = (self.B_re + 1j * self.B_im) * \
+            jnp.expand_dims(jnp.exp(self.gamma_log), axis=-1)
         C = self.C_re + 1j * self.C_im
 
-        Lambda_elements = jnp.repeat(diag_lambda[None, ...], inputs.shape[0], axis=0)
+        Lambda_elements = jnp.repeat(
+            diag_lambda[None, ...], inputs.shape[0], axis=0)
         Bu_elements = jax.vmap(lambda u: B_norm @ u)(inputs)
         # Compute hidden states
-        _, hidden_states = parallel_scan(binary_operator_diag, (Lambda_elements, Bu_elements))
+        _, hidden_states = parallel_scan(
+            binary_operator_diag, (Lambda_elements, Bu_elements))
         # Use them to compute the output of the module
-        outputs = jax.vmap(lambda h, x: (C @ h).real + self.D * x)(hidden_states, inputs)
+        outputs = jax.vmap(lambda h, x: (C @ h).real +
+                           self.D * x)(hidden_states, inputs)
 
         return outputs
 
@@ -115,7 +123,8 @@ class SequenceLayer(nn.Module):
             self.normalization = nn.BatchNorm(
                 use_running_average=not self.training, axis_name="batch"
             )
-        self.drop = nn.Dropout(self.dropout, broadcast_dims=[0], deterministic=not self.training)
+        self.drop = nn.Dropout(self.dropout, broadcast_dims=[
+                               0], deterministic=not self.training)
 
     def __call__(self, inputs):
         x = self.normalization(inputs)  # pre normalization
@@ -181,7 +190,9 @@ class ClassificationModel(nn.Module):
         self.decoder = nn.Dense(self.d_output * self.multidim)
 
     def __call__(self, x):
+        print('input shape: {}', x.shape)
         x = self.encoder(x)
+        print('output shape: {}', x.shape)
         if self.pooling in ["mean"]:
             x = jnp.mean(x, axis=0)  # mean pooling across time
         elif self.pooling in ["last"]:
@@ -199,7 +210,8 @@ BatchClassificationModel = nn.vmap(
     ClassificationModel,
     in_axes=0,
     out_axes=0,
-    variable_axes={"params": None, "dropout": None, "batch_stats": None, "cache": 0, "prime": None},
+    variable_axes={"params": None, "dropout": None,
+                   "batch_stats": None, "cache": 0, "prime": None},
     split_rngs={"params": False, "dropout": True},
     axis_name="batch",
 )

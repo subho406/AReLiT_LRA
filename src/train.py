@@ -11,8 +11,9 @@ from .train_helpers import (
     validate,
 )
 from .dataloading import Datasets
-from .model import BatchClassificationModel
-from .model import LRU
+from .model_lru import BatchClassificationModel as BatchClassificationModelLRU
+from .model_arelit import BatchClassificationModel as BatchClassificationModelArelit
+from .model_lru import LRU
 
 
 def train(args):
@@ -74,26 +75,45 @@ def train(args):
     ) = create_dataset_fn(args.dir_name, seed=args.jax_seed, batch_size=args.batch_size)
     print(f"[*] Starting training on `{args.dataset}` =>> Initializing...")
 
-    lru = partial(
-        LRU, d_hidden=args.d_hidden, d_model=args.d_model, r_min=args.r_min, r_max=args.r_max
-    )
     if retrieval:
         raise NotImplementedError("Retrieval model not implemented yet")
     else:
-        model_cls = partial(
-            BatchClassificationModel,
-            lru=lru,
-            d_output=n_classes,
-            d_model=args.d_model,
-            n_layers=args.n_layers,
-            dropout=args.p_dropout,
-            pooling=args.pooling,
-            norm=args.norm,
-            multidim=1 + dense_targets,
-        )
+        if args.model == "lru":
+            lru = partial(
+                LRU, d_hidden=args.d_hidden, d_model=args.d_model, r_min=args.r_min, r_max=args.r_max
+            )
+            model_cls = partial(
+                BatchClassificationModelLRU,
+                lru=lru,
+                d_output=n_classes,
+                d_model=args.d_model,
+                n_layers=args.n_layers,
+                dropout=args.p_dropout,
+                pooling=args.pooling,
+                norm=args.norm,
+                multidim=1 + dense_targets,
+            )
+        elif args.model == "arelit":
+            model_cls = partial(
+                BatchClassificationModelArelit,
+                n_layers=args.n_layers,
+                d_model=args.d_model,
+                d_head=args.arelit_d_head,
+                d_ffc=args.d_model,
+                n_heads=args.arelit_n_head,
+                eta=args.arelit_eta,
+                r=args.arelit_r,
+                d_output=n_classes,
+                pooling=args.pooling,
+                multidim=1 + dense_targets,
+            )
+        else:
+            raise ValueError(
+                "Unknown model type, choose from `lru` or `arelit`")
 
     # Initialize training state
     state = create_train_state(
+        args.model,
         model_cls,
         init_rng,
         in_dim=in_dim,
@@ -106,7 +126,8 @@ def train(args):
     )
 
     # Training Loop over epochs
-    best_loss, best_acc, best_epoch = 100000000, -100000000.0, 0  # This best loss is val_loss
+    best_loss, best_acc, best_epoch = 100000000, - \
+        100000000.0, 0  # This best loss is val_loss
     count, best_val_loss = 0, 100000000  # This line is for early stopping purposes
     lr_count, opt_acc = 0, -100000000.0  # This line is for learning rate decay
     step = 0  # for per step learning rate decay
@@ -121,7 +142,8 @@ def train(args):
             print("Using cosine annealing for epoch {}".format(epoch + 1))
             decay_function = cosine_annealing
             # for per step learning rate decay
-            end_step = steps_per_epoch * args.epochs - (steps_per_epoch * args.warmup_end)
+            end_step = steps_per_epoch * args.epochs - \
+                (steps_per_epoch * args.warmup_end)
         else:
             print("Using constant lr for epoch {}".format(epoch + 1))
             decay_function = constant_lr
@@ -132,15 +154,18 @@ def train(args):
 
         train_rng, skey = random.split(train_rng)
         state, train_loss, step = train_epoch(
+            args.model,
             state, skey, model_cls, trainloader, seq_len, in_dim, args.norm, lr_params
         )
 
         if valloader is not None:
             print(f"[*] Running Epoch {epoch + 1} Validation...")
-            val_loss, val_acc = validate(state, model_cls, valloader, seq_len, in_dim, args.norm)
+            val_loss, val_acc = validate(
+                state, model_cls, valloader, seq_len, in_dim, args.norm)
 
             print(f"[*] Running Epoch {epoch + 1} Test...")
-            test_loss, test_acc = validate(state, model_cls, testloader, seq_len, in_dim, args.norm)
+            test_loss, test_acc = validate(
+                state, model_cls, testloader, seq_len, in_dim, args.norm)
 
             print(f"\n=>> Epoch {epoch + 1} Metrics ===")
             print(
@@ -154,7 +179,8 @@ def train(args):
         else:
             # else use test set as validation set (e.g. IMDB)
             print(f"[*] Running Epoch {epoch + 1} Test...")
-            val_loss, val_acc = validate(state, model_cls, testloader, seq_len, in_dim, args.norm)
+            val_loss, val_acc = validate(
+                state, model_cls, testloader, seq_len, in_dim, args.norm)
 
             print(f"\n=>> Epoch {epoch + 1} Metrics ===")
             print(
