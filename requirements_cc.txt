@@ -148,7 +148,6 @@ protobuf==4.25.3
 psutil==5.9.5+computecanada
 ptyprocess==0.7.0+computecanada
 pure_eval==0.2.2+computecanada
-pyarrow @ file:///tmp/ebuser/avx512/Arrow/15.0.1/gcccorecuda-2023a/arrow/python
 pyarrow_hotfix==0.6+computecanada
 pycparser==2.21+computecanada
 pygame==2.5.2+computecanada

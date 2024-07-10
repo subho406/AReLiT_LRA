@@ -110,8 +110,8 @@ def create_lra_listops_classification_dataset(
     print("[*] Generating LRA-listops Classification Dataset")
 
     name = "listops"
-    # dir_name = "/scratch/subho/raw_datasets/lra_release/listops-1000"
-    dir_name = "./raw_datasets/lra_release/lra_release/listops-1000"
+    dir_name = "/scratch/subho/raw_datasets/lra_release/listops-1000"
+    # dir_name = "./raw_datasets/lra_release/lra_release/listops-1000"
     dataset_obj = ListOps(name, data_dir=dir_name)
     dataset_obj.cache_dir = Path(cache_dir) / name
     dataset_obj.setup()

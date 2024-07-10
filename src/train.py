@@ -99,7 +99,7 @@ def train(args):
                 n_layers=args.n_layers,
                 d_model=args.d_model,
                 d_head=args.arelit_d_head,
-                d_ffc=args.d_model,
+                d_ffc=args.arelit_d_ffc,
                 n_heads=args.arelit_n_head,
                 eta=args.arelit_eta,
                 r=args.arelit_r,

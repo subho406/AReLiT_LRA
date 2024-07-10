@@ -44,13 +44,14 @@ if __name__ == "__main__":
     parser.add_argument("--model", type=str, default="arelit",)
     parser.add_argument("--n_layers", type=int, default=4,
                         help="Number of layers in the network")
-    parser.add_argument("--d_model", type=int, default=256,
+    parser.add_argument("--d_model", type=int, default=128,
                         help="Number of features")
     parser.add_argument("--d_hidden", type=int, default=128,
                         help="Latent size of recurent unit")
     parser.add_argument("--arelit_d_head", type=int, default=64,)
-    parser.add_argument("--arelit_n_head", type=int, default=8,)
-    parser.add_argument("--arelit_eta", type=int, default=4,)
+    parser.add_argument("--arelit_n_head", type=int, default=4,)
+    parser.add_argument("--arelit_d_ffc", type=int, default=128,)
+    parser.add_argument("--arelit_eta", type=int, default=8,)
     parser.add_argument("--arelit_r", type=int, default=2,)
     parser.add_argument(
         "--pooling",
@@ -71,7 +72,7 @@ if __name__ == "__main__":
 
     # Optimization Parameters
     parser.add_argument("--batch_size", type=int,
-                        default=64, help="Batch size")
+                        default=32, help="Batch size")
     parser.add_argument("--epochs", type=int, default=100,
                         help="Max number of epochs")
     parser.add_argument(

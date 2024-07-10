@@ -161,3 +161,21 @@ backpropagation-through-time that does not require going back in time: \
 **Online learning of long-range dependencies** \
 Nicolas Zucchet, Robert Meier, Simon Schug, Asier Mujika, João Sacramento \
 [arXiv](https://arxiv.org/abs/2305.15947)
+
+
+# Our 
+
+LRU
+```
+python run_train.py --dataset listops-classification --epochs 40 --model lru
+```
+
+OUR
+```
+python run_train.py --dataset listops-classification --epochs 40 --model arelit --norm none --batch_size 12 --wandb_project lra_test --d_model 512 --arelit_d_ffc 1024 --arelit_d_head 512 --arelit_n_head 8
+```
+
+OUR IMDB
+```
+python run_train.py --dataset imdb-classification --epochs 40 --model arelit --norm none --batch_size 12
+```
